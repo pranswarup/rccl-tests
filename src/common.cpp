@@ -1032,6 +1032,8 @@ int main(int argc, char* argv[]) {
   #else
     test_ncclVersion = NCCL_VERSION_CODE;
   #endif
+
+
   //printf("# NCCL_VERSION_CODE=%d ncclGetVersion=%d\n", NCCL_VERSION_CODE, test_ncclVersion);
   #if NCCL_VERSION_CODE >= NCCL_VERSION(2,0,0)
     test_opnum = 4;
@@ -1096,7 +1098,7 @@ int main(int argc, char* argv[]) {
 
     if (c == -1)
       break;
-
+    
     switch(c) {
       case 't':
         nThreads = strtol(optarg, NULL, 0);
@@ -1215,11 +1217,13 @@ int main(int argc, char* argv[]) {
       	break;
       case 'F':
         enable_cache_flush = strtol(optarg, NULL, 0);
-        if (enable_cache_flush > 0) {
+        /*
+          if (enable_cache_flush > 0) {
           hipDeviceProp_t deviceProps;
           CHECK_HIP_ERROR(hipGetDeviceProperties(&deviceProps, 0));
           gpu_block3 = deviceProps.multiProcessorCount * 60;
         }
+        */
         break;
       case 'E':
         enable_rotating_tensor = strtol(optarg, NULL, 0);
@@ -1299,6 +1303,7 @@ int main(int argc, char* argv[]) {
 #ifdef MPI_SUPPORT
   MPI_Init(&argc, &argv);
 #endif
+
   TESTCHECK(run());
   return 0;
 }
