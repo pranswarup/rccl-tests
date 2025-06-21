@@ -1053,6 +1053,7 @@ int main(int argc, char* argv[]) {
     }
   #endif
 
+/*
   // Parse args
   double parsed;
   int longindex;
@@ -1098,7 +1099,7 @@ int main(int argc, char* argv[]) {
 
     if (c == -1)
       break;
-    
+
     switch(c) {
       case 't':
         nThreads = strtol(optarg, NULL, 0);
@@ -1217,13 +1218,11 @@ int main(int argc, char* argv[]) {
       	break;
       case 'F':
         enable_cache_flush = strtol(optarg, NULL, 0);
-        /*
-          if (enable_cache_flush > 0) {
+        if (enable_cache_flush > 0) {
           hipDeviceProp_t deviceProps;
           CHECK_HIP_ERROR(hipGetDeviceProperties(&deviceProps, 0));
           gpu_block3 = deviceProps.multiProcessorCount * 60;
         }
-        */
         break;
       case 'E':
         enable_rotating_tensor = strtol(optarg, NULL, 0);
@@ -1279,6 +1278,7 @@ int main(int argc, char* argv[]) {
         return 0;
     }
   }
+*/
 
   CUDACHECK(cudaGetDeviceCount(&numDevices));
 #ifndef MPI_SUPPORT
