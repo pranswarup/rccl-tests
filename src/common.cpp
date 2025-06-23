@@ -1053,190 +1053,117 @@ int main(int argc, char* argv[]) {
     }
   #endif
 
-/*
   // Parse args
+  // Replace getopt_long with manual argument parsing
   double parsed;
-  int longindex;
-  static struct option longopts[] = {
-    {"nthreads", required_argument, 0, 't'},
-    {"ngpus", required_argument, 0, 'g'},
-    {"minbytes", required_argument, 0, 'b'},
-    {"maxbytes", required_argument, 0, 'e'},
-    {"stepbytes", required_argument, 0, 'i'},
-    {"stepfactor", required_argument, 0, 'f'},
-    {"iters", required_argument, 0, 'n'},
-    {"agg_iters", required_argument, 0, 'm'},
-    {"warmup_iters", required_argument, 0, 'w'},
-    {"run_cycles", required_argument, 0, 'N'},
-    {"parallel_init", required_argument, 0, 'p'},
-    {"check", required_argument, 0, 'c'},
-    {"op", required_argument, 0, 'o'},
-    {"datatype", required_argument, 0, 'd'},
-    {"root", required_argument, 0, 'r'},
-    {"blocking", required_argument, 0, 'z'},
-    {"stream_null", required_argument, 0, 'y'},
-    {"timeout", required_argument, 0, 'T'},
-    {"cudagraph", required_argument, 0, 'G'},
-    {"report_cputime", required_argument, 0, 'C'},
-    {"average", required_argument, 0, 'a'},
-    {"local_register", required_argument, 0, 'R'},
-    {"memory_type", required_argument, 0, 'y'},       //RCCL
-    {"cumask", required_argument, 0, 'u'},            //RCCL
-    {"out_of_place", required_argument, 0, 'O'},      //RCCL
-    {"delay_inout_place", required_argument, 0, 'q'}, //RCCL
-    {"cache_flush", required_argument, 0, 'F'},       //RCCL
-    {"rotating_tensor", required_argument, 0, 'E'},   //RCCL
-    {"output_file", required_argument, 0, 'x'},       //RCCL
-    {"output_format", required_argument, 0, 'Z'},     //RCCL
-    {"help", no_argument, 0, 'h'},
-    {}
-  };
-
-  while(1) {
-    int c;
-
-    c = getopt_long(argc, argv, "t:g:b:e:i:f:n:m:w:N:p:c:o:d:r:z:y:T:G:C:a:R:Y:u:O:q:F:E:x:Z:h", longopts, &longindex);
-
-    if (c == -1)
-      break;
-
-    switch(c) {
-      case 't':
-        nThreads = strtol(optarg, NULL, 0);
-        break;
-      case 'g':
-        nGpus = strtol(optarg, NULL, 0);
-        break;
-      case 'b':
-        parsed = parsesize(optarg);
-        if (parsed < 0) {
-          fprintf(stderr, "invalid size specified for 'minbytes'\n");
-          return -1;
-        }
-        minBytes = (size_t)parsed;
-        break;
-      case 'e':
-        parsed = parsesize(optarg);
-        if (parsed < 0) {
-          fprintf(stderr, "invalid size specified for 'maxbytes'\n");
-          return -1;
-        }
-        maxBytes = (size_t)parsed;
-        break;
-      case 'i':
-        parsed = parsesize(optarg);
-        if (parsed < 0) {
-          fprintf(stderr, "invalid size specified for 'stepBytes'\n");
-          return -1;
-        }
-        stepBytes = (size_t)parsed;
-        break;
-      case 'f':
-        stepFactor = strtol(optarg, NULL, 0);
-        break;
-      case 'n':
-        iters = (int)strtol(optarg, NULL, 0);
-        break;
-      case 'm':
-#if NCCL_MAJOR > 2 || (NCCL_MAJOR >= 2 && NCCL_MINOR >= 2)
-        agg_iters = (int)strtol(optarg, NULL, 0);
-#else
-        fprintf(stderr, "Option -m not supported before NCCL 2.2. Ignoring\n");
-#endif
-        break;
-      case 'w':
-        warmup_iters = (int)strtol(optarg, NULL, 0);
-        break;
-      case 'N':
-        run_cycles = (int)strtol(optarg, NULL, 0);
-        break;
-      case 'p':
-        parallel_init = (int)strtol(optarg, NULL, 0);
-        break;
-      case 'c':
-        datacheck = (int)strtol(optarg, NULL, 0);
-        break;
-      case 'o':
-        ncclop = ncclstringtoop(optarg);
-        break;
-      case 'd':
-        nccltype = ncclstringtotype(optarg);
-        break;
-      case 'r':
-        ncclroot = ncclstringtoroot(optarg);
-        break;
-      case 'z':
-        blocking_coll = strtol(optarg, NULL, 0);
-        break;
-      case 'y':
-        streamnull = strtol(optarg, NULL, 0);
-        break;
-      case 'T':
-        timeout = strtol(optarg, NULL, 0);
-        break;
-      case 'G':
-#if (NCCL_MAJOR > 2 || (NCCL_MAJOR >= 2 && NCCL_MINOR >= 9)) && HIP_VERSION >= 50221310
-        cudaGraphLaunches = strtol(optarg, NULL, 0);
-#else
-        printf("Option -G (HIP graph) not supported before NCCL 2.9 + ROCm 5.2 Ignoring\n");
-#endif
-        break;
-      case 'C':
-        report_cputime = strtol(optarg, NULL, 0);
-        break;
-      case 'a':
-        average = (int)strtol(optarg, NULL, 0);
-        break;
-      case 'R':
-#if NCCL_VERSION_CODE >= NCCL_VERSION(2,19,0)
-        if ((int)strtol(optarg, NULL, 0)) {
-          local_register = 1;
-        }
-#else
-        printf("Option -R (register) is not supported before NCCL 2.19. Ignoring\n");
-#endif
-        break;
-      case 'Y':
-        memorytype = ncclstringtomtype(optarg);
-        break;
-      case 'u':
-        {
-          int nmasks = 0;
-          char *mask = strtok(optarg, ",");
-          while (mask != NULL && nmasks < 4) {
-            cumask[nmasks++] = strtol(mask, NULL, 16);
-            mask = strtok(NULL, ",");
-          };
-        }
-	break;
-      case 'O':
-        enable_out_of_place = strtol(optarg, NULL, 0);
-        enable_in_place = enable_out_of_place ? 0 : 1;
-        break;
-      case 'q':
-        delay_inout_place = (int)strtol(optarg, NULL, 10);
-      	break;
-      case 'F':
-        enable_cache_flush = strtol(optarg, NULL, 0);
-        if (enable_cache_flush > 0) {
-          hipDeviceProp_t deviceProps;
-          CHECK_HIP_ERROR(hipGetDeviceProperties(&deviceProps, 0));
-          gpu_block3 = deviceProps.multiProcessorCount * 60;
-        }
-        break;
-      case 'E':
-        enable_rotating_tensor = strtol(optarg, NULL, 0);
-        break;
-      case 'x':
-        output_file = optarg;
-        break;
-      case 'Z':
-        output_format = optarg;
-        break;
-      case 'h':
-      default:
-        if (c != 'h') printf("invalid option '%c'\n", c);
-        printf("USAGE: %s \n\t"
+  for (int argi = 1; argi < argc; ++argi) {
+    const char* arg = argv[argi];
+    if (strcmp(arg, "-t") == 0 || strcmp(arg, "--nthreads") == 0) {
+      nThreads = strtol(argv[++argi], NULL, 0);
+    } else if (strcmp(arg, "-g") == 0 || strcmp(arg, "--ngpus") == 0) {
+      nGpus = strtol(argv[++argi], NULL, 0);
+    } else if (strcmp(arg, "-b") == 0 || strcmp(arg, "--minbytes") == 0) {
+      parsed = parsesize(argv[++argi]);
+      if (parsed < 0) {
+        fprintf(stderr, "invalid size specified for 'minbytes'\n");
+        return -1;
+      }
+      minBytes = (size_t)parsed;
+    } else if (strcmp(arg, "-e") == 0 || strcmp(arg, "--maxbytes") == 0) {
+      parsed = parsesize(argv[++argi]);
+      if (parsed < 0) {
+        fprintf(stderr, "invalid size specified for 'maxbytes'\n");
+        return -1;
+      }
+      maxBytes = (size_t)parsed;
+    } else if (strcmp(arg, "-i") == 0 || strcmp(arg, "--stepbytes") == 0) {
+      parsed = parsesize(argv[++argi]);
+      if (parsed < 0) {
+        fprintf(stderr, "invalid size specified for 'stepBytes'\n");
+        return -1;
+      }
+      stepBytes = (size_t)parsed;
+    } else if (strcmp(arg, "-f") == 0 || strcmp(arg, "--stepfactor") == 0) {
+      stepFactor = strtol(argv[++argi], NULL, 0);
+    } else if (strcmp(arg, "-n") == 0 || strcmp(arg, "--iters") == 0) {
+      iters = (int)strtol(argv[++argi], NULL, 0);
+    } else if (strcmp(arg, "-m") == 0 || strcmp(arg, "--agg_iters") == 0) {
+  #if NCCL_MAJOR > 2 || (NCCL_MAJOR >= 2 && NCCL_MINOR >= 2)
+      agg_iters = (int)strtol(argv[++argi], NULL, 0);
+  #else
+      fprintf(stderr, "Option -m not supported before NCCL 2.2. Ignoring\n");
+      ++argi;
+  #endif
+    } else if (strcmp(arg, "-w") == 0 || strcmp(arg, "--warmup_iters") == 0) {
+      warmup_iters = (int)strtol(argv[++argi], NULL, 0);
+    } else if (strcmp(arg, "-N") == 0 || strcmp(arg, "--run_cycles") == 0) {
+      run_cycles = (int)strtol(argv[++argi], NULL, 0);
+    } else if (strcmp(arg, "-p") == 0 || strcmp(arg, "--parallel_init") == 0) {
+      parallel_init = (int)strtol(argv[++argi], NULL, 0);
+    } else if (strcmp(arg, "-c") == 0 || strcmp(arg, "--check") == 0) {
+      datacheck = (int)strtol(argv[++argi], NULL, 0);
+    } else if (strcmp(arg, "-o") == 0 || strcmp(arg, "--op") == 0) {
+      ncclop = ncclstringtoop(argv[++argi]);
+    } else if (strcmp(arg, "-d") == 0 || strcmp(arg, "--datatype") == 0) {
+      nccltype = ncclstringtotype(argv[++argi]);
+    } else if (strcmp(arg, "-r") == 0 || strcmp(arg, "--root") == 0) {
+      ncclroot = ncclstringtoroot(argv[++argi]);
+    } else if (strcmp(arg, "-z") == 0 || strcmp(arg, "--blocking") == 0) {
+      blocking_coll = strtol(argv[++argi], NULL, 0);
+    } else if (strcmp(arg, "-y") == 0 || strcmp(arg, "--stream_null") == 0) {
+      streamnull = strtol(argv[++argi], NULL, 0);
+    } else if (strcmp(arg, "-T") == 0 || strcmp(arg, "--timeout") == 0) {
+      timeout = strtol(argv[++argi], NULL, 0);
+    } else if (strcmp(arg, "-G") == 0 || strcmp(arg, "--cudagraph") == 0) {
+  #if (NCCL_MAJOR > 2 || (NCCL_MAJOR >= 2 && NCCL_MINOR >= 9)) && HIP_VERSION >= 50221310
+      cudaGraphLaunches = strtol(argv[++argi], NULL, 0);
+  #else
+      printf("Option -G (HIP graph) not supported before NCCL 2.9 + ROCm 5.2 Ignoring\n");
+      ++argi;
+  #endif
+    } else if (strcmp(arg, "-C") == 0 || strcmp(arg, "--report_cputime") == 0) {
+      report_cputime = strtol(argv[++argi], NULL, 0);
+    } else if (strcmp(arg, "-a") == 0 || strcmp(arg, "--average") == 0) {
+      average = (int)strtol(argv[++argi], NULL, 0);
+    } else if (strcmp(arg, "-R") == 0 || strcmp(arg, "--local_register") == 0) {
+  #if NCCL_VERSION_CODE >= NCCL_VERSION(2,19,0)
+      if ((int)strtol(argv[++argi], NULL, 0)) {
+        local_register = 1;
+      }
+  #else
+      printf("Option -R (register) is not supported before NCCL 2.19. Ignoring\n");
+      ++argi;
+  #endif
+    } else if (strcmp(arg, "-Y") == 0 || strcmp(arg, "--memory_type") == 0) {
+      memorytype = ncclstringtomtype(argv[++argi]);
+    } else if (strcmp(arg, "-u") == 0 || strcmp(arg, "--cumask") == 0) {
+      int nmasks = 0;
+      char* maskstr = argv[++argi];
+      char* mask = strtok(maskstr, ",");
+      while (mask != NULL && nmasks < 4) {
+        cumask[nmasks++] = strtol(mask, NULL, 16);
+        mask = strtok(NULL, ",");
+      }
+    } else if (strcmp(arg, "-O") == 0 || strcmp(arg, "--out_of_place") == 0) {
+      enable_out_of_place = strtol(argv[++argi], NULL, 0);
+      enable_in_place = enable_out_of_place ? 0 : 1;
+    } else if (strcmp(arg, "-q") == 0 || strcmp(arg, "--delay_inout_place") == 0) {
+      delay_inout_place = (int)strtol(argv[++argi], NULL, 10);
+    } else if (strcmp(arg, "-F") == 0 || strcmp(arg, "--cache_flush") == 0) {
+      enable_cache_flush = strtol(argv[++argi], NULL, 0);
+      if (enable_cache_flush > 0) {
+        hipDeviceProp_t deviceProps;
+        CHECK_HIP_ERROR(hipGetDeviceProperties(&deviceProps, 0));
+        gpu_block3 = deviceProps.multiProcessorCount * 60;
+      }
+    } else if (strcmp(arg, "-E") == 0 || strcmp(arg, "--rotating_tensor") == 0) {
+      enable_rotating_tensor = strtol(argv[++argi], NULL, 0);
+    } else if (strcmp(arg, "-x") == 0 || strcmp(arg, "--output_file") == 0) {
+      output_file = argv[++argi];
+    } else if (strcmp(arg, "-Z") == 0 || strcmp(arg, "--output_format") == 0) {
+      output_format = argv[++argi];
+    } else if (strcmp(arg, "-h") == 0 || strcmp(arg, "--help") == 0) {
+      printf("USAGE: %s \n\t"
             "[-t,--nthreads <num threads>] \n\t"
             "[-g,--ngpus <gpus per thread>] \n\t"
             "[-b,--minbytes <min size in bytes>] \n\t"
@@ -1278,7 +1205,6 @@ int main(int argc, char* argv[]) {
         return 0;
     }
   }
-*/
 
   CUDACHECK(cudaGetDeviceCount(&numDevices));
 #ifndef MPI_SUPPORT
